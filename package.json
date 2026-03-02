@@ -1,0 +1,32 @@
+{
+  "name": "task-manager",
+  "version": "1.0.0",
+  "description": "Task Manager API using Node.js, Express, and MongoDB",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "server": "nodemon server.js",
+    "start": "node server.js",
+    "test": "echo \"No test specified\" && exit 0"
+  },
+  "keywords": [
+    "nodejs",
+    "express",
+    "mongodb",
+    "mongoose",
+    "task-manager",
+    "api"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "mongodb": "^7.1.0",
+    "mongoose": "^9.2.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
