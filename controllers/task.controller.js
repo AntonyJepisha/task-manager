@@ -4,12 +4,26 @@ import Task from "../models/task.model.js";
 // CREATE TASK
 export const createTask = async (req, res) => {
   try {
-    const task = await Task.create(req.body);
+    console.log(req.body);
+    const { title, description, priority } = req.body;
 
-    res.status(201).json(task);
+    const task = new Task({
+      title,
+      description,
+      priority,
+      status: "pending"
+    });
+
+    const savedTask = await task.save();
+
+    res.status(201).json(savedTask);
 
   } catch (error) {
-    res.status(400).json({ message: error.message });
+
+    res.status(400).json({
+      message: error.message
+    });
+
   }
 };
 
@@ -17,12 +31,28 @@ export const createTask = async (req, res) => {
 // GET ALL TASKS
 export const getTasks = async (req, res) => {
   try {
-    const tasks = await Task.find();
 
-    res.status(200).json(tasks);
+    const search = req.query.search || "";
+
+    let query = {};
+
+    if (search) {
+      query.title = { $regex: search, $options: "i" };
+    }
+
+    const tasks = await Task.find(query)
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      tasks
+    });
 
   } catch (error) {
-    res.status(500).json({ message: error.message });
+
+    res.status(500).json({
+      message: error.message
+    });
+
   }
 };
 

@@ -11,4 +11,8 @@
 4. `git add .`
 5. `git commit -m "init"`
 6. `git push -u origin main` or `git push`
-s
+7. `npm install cors`
+
+## run server
+1. `npm run server `
+2. ` npx http-server`
