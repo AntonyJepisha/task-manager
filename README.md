@@ -13,6 +13,6 @@
 6. `git push -u origin main` or `git push`
 7. `npm install cors`
 
-## run server
+## run in terminal
 1. `npm run server `
 2. ` npx http-server`

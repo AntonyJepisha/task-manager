@@ -28,34 +28,54 @@ export const createTask = async (req, res) => {
 };
 
 
-// GET ALL TASKS
+
+
+// GET TASKS with Pagination, Search, Filter
 export const getTasks = async (req, res) => {
+
   try {
 
-    const search = req.query.search || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
 
-    let query = {};
+    const skip = (page - 1) * limit;
+
+    const search = req.query.search || "";
+    const status = req.query.status || "";
+
+    let query = {
+      isDeleted: false
+    };
 
     if (search) {
       query.title = { $regex: search, $options: "i" };
     }
 
+    if (status) {
+      query.status = status;
+    }
+
     const tasks = await Task.find(query)
+      .skip(skip)
+      .limit(limit)
       .sort({ createdAt: -1 });
 
-    res.status(200).json({
+    const total = await Task.countDocuments(query);
+
+    res.json({
+      total,
+      page,
+      limit,
       tasks
     });
 
-  } catch (error) {
-
-    res.status(500).json({
-      message: error.message
-    });
-
   }
-};
 
+  catch(error){
+    res.status(500).json({ message: error.message });
+  }
+
+};
 
 // GET SINGLE TASK
 export const getTaskById = async (req, res) => {
@@ -95,15 +115,24 @@ export const updateTask = async (req, res) => {
 
 // DELETE TASK
 export const deleteTask = async (req, res) => {
+
   try {
-    const task = await Task.findByIdAndDelete(req.params.id);
+
+    const task = await Task.findByIdAndUpdate(
+      req.params.id,
+      { isDeleted: true },
+      { new: true }
+    );
 
     if (!task)
       return res.status(404).json({ message: "Task not found" });
 
-    res.status(200).json({ message: "Task deleted successfully" });
+    res.json({ message: "Task deleted (soft delete)" });
 
-  } catch (error) {
+  }
+
+  catch(error){
     res.status(500).json({ message: error.message });
   }
+
 };
