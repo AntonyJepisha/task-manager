@@ -76,7 +76,6 @@ export const getTasks = async (req, res) => {
   }
 
 };
-
 // GET SINGLE TASK
 export const getTaskById = async (req, res) => {
   try {
@@ -115,24 +114,23 @@ export const updateTask = async (req, res) => {
 
 // DELETE TASK
 export const deleteTask = async (req, res) => {
-
   try {
 
-    const task = await Task.findByIdAndUpdate(
-      req.params.id,
-      { isDeleted: true },
-      { new: true }
-    );
+    const task = await Task.findOne({ 
+      _id: req.params.id, 
+      isDeleted: false 
+    });
 
-    if (!task)
-      return res.status(404).json({ message: "Task not found" });
+    if (!task) {
+      return res.status(404).json({ message: "Task not found or already deleted" });
+    }
 
-    res.json({ message: "Task deleted (soft delete)" });
+    task.isDeleted = true;
+    await task.save();
 
-  }
+    res.status(200).json({ message: "Task deleted successfully" });
 
-  catch(error){
+  } catch (error) {
     res.status(500).json({ message: error.message });
   }
-
 };

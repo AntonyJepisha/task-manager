@@ -73,7 +73,6 @@
 
 <button onclick="loadTasks()">Show All</button>
 
-
 <table>
 
   <thead>
@@ -91,80 +90,86 @@
 </table>
 
 
+
 <script>
 
 const API = "http://localhost:5000/api/tasks";
 
+let currentTasks = [];
+let editMode = false;
 
-// Load tasks
+// =======================
+// LOAD TASKS
+// =======================
 async function loadTasks() {
+  try {
+    const res = await fetch(API);
+    const data = await res.json();
 
-  const res = await fetch(API);
+    currentTasks = data.tasks || data; // supports both formats
+    displayTasks(currentTasks);
 
-  const data = await res.json();
-
-  displayTasks(data.tasks);
-
+  } catch (error) {
+    console.error("Error loading tasks:", error);
+  }
 }
 
 
-// Search tasks
+// =======================
+// SEARCH TASKS
+// =======================
 async function searchTasks() {
 
-  const searchValue = document.getElementById("search").value;
+  const searchValue = document.getElementById("search").value.trim();
 
-  const res = await fetch(`${API}?search=${searchValue}`);
+  // 🚫 If empty → do nothing (do NOT call API)
+  if (searchValue === "") {
+    return;
+  }
 
-  const data = await res.json();
+  try {
+    const res = await fetch(`${API}?search=${searchValue}`);
+    const data = await res.json();
 
-  displayTasks(data.tasks);
+    const tasks = data.tasks || data;
+    displayTasks(tasks);
 
+  } catch (error) {
+    console.error("Search error:", error);
+  }
 }
 
-
-// Display tasks
+// =======================
+// DISPLAY TASKS
+// =======================
 function displayTasks(tasks) {
 
   const table = document.getElementById("taskTable");
-
   table.innerHTML = "";
 
   tasks.forEach(task => {
 
-    table.innerHTML += `
-      <tr>
-        <td>${task.title}</td>
-        <td>${task.description}</td>
-        <td>${task.priority}</td>
-        <td>${task.status}</td>
+    const row = document.createElement("tr");
 
-        <td>
-
-          <button onclick="editTask(
-            '${task._id}',
-            '${task.title}',
-            '${task.description}',
-            '${task.priority}',
-            '${task.status}'
-          )">
-            Edit
-          </button>
-
-          <button onclick="deleteTask('${task._id}')">
-            Delete
-          </button>
-
-        </td>
-
-      </tr>
+    row.innerHTML = `
+      <td>${task.title}</td>
+      <td>${task.description}</td>
+      <td>${task.priority}</td>
+      <td>${task.status}</td>
+      <td>
+        <button onclick="editTask('${task._id}')">Edit</button>
+        <button onclick="deleteTask('${task._id}')">Delete</button>
+      </td>
     `;
 
+    table.appendChild(row);
   });
-
 }
 
 
-// Add or Update Task
+// =======================
+// ADD OR UPDATE TASK
+// =======================
 document.getElementById("taskForm").addEventListener("submit", async (e) => {
 
   e.preventDefault();
@@ -172,106 +177,122 @@ document.getElementById("taskForm").addEventListener("submit", async (e) => {
   const id = document.getElementById("taskId").value;
 
   const task = {
-
-    title: document.getElementById("title").value,
-
-    description: document.getElementById("description").value,
-
+    title: document.getElementById("title").value.trim(),
+    description: document.getElementById("description").value.trim(),
     priority: document.getElementById("priority").value,
-
     status: document.getElementById("status").value
-
   };
 
+  try {
 
-  if (id) {
+    if (id) {
 
-    // UPDATE
-    await fetch(`${API}/${id}`, {
+      // Find original task
+      const original = currentTasks.find(t => t._id === id);
 
-      method: "PUT",
+      // Check if changed
+      if (
+        original.title === task.title &&
+        original.description === task.description &&
+        original.priority === task.priority &&
+        original.status === task.status
+      ) {
+        alert("No changes detected");
+        return;
+      }
 
-      headers: {
-        "Content-Type": "application/json"
-      },
+      // UPDATE
+      await fetch(`${API}/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(task)
+      });
 
-      body: JSON.stringify(task)
+      alert("Task Updated Successfully");
 
-    });
+    } else {
 
-    alert("Task Updated Successfully");
+      // CREATE
+      await fetch(API, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(task)
+      });
 
+      alert("Task Added Successfully");
+    }
+
+    resetForm();
+    loadTasks();
+
+  } catch (error) {
+    console.error("Error:", error);
   }
-
-  else {
-
-    // CREATE
-    await fetch(API, {
-
-      method: "POST",
-
-      headers: {
-        "Content-Type": "application/json"
-      },
-
-      body: JSON.stringify(task)
-
-    });
-
-    alert("Task Added Successfully");
-
-  }
-
-
-  document.getElementById("taskForm").reset();
-
-  document.getElementById("taskId").value = "";
-
-  document.getElementById("formTitle").innerText = "Add Task";
-
-  loadTasks();
 
 });
 
 
-// Edit Task
-function editTask(id, title, description, priority, status) {
+// =======================
+// EDIT TASK
+// =======================
+function editTask(id) {
 
-  document.getElementById("taskId").value = id;
+  const task = currentTasks.find(t => t._id === id);
+  if (!task) return;
 
-  document.getElementById("title").value = title;
-
-  document.getElementById("description").value = description;
-
-  document.getElementById("priority").value = priority;
-
-  document.getElementById("status").value = status;
+  document.getElementById("taskId").value = task._id;
+  document.getElementById("title").value = task.title;
+  document.getElementById("description").value = task.description;
+  document.getElementById("priority").value = task.priority;
+  document.getElementById("status").value = task.status;
 
   document.getElementById("formTitle").innerText = "Update Task";
 
+  editMode = true;
 }
 
 
-// Delete Task
+// =======================
+// DELETE TASK
+// =======================
 async function deleteTask(id) {
 
+  const confirmDelete = confirm("Are you sure you want to delete this task?");
+
+  if (!confirmDelete) {
+    return; // User clicked Cancel
+  }
+
   await fetch(`${API}/${id}`, {
-
     method: "DELETE"
-
   });
 
   alert("Task Deleted Successfully");
-
   loadTasks();
-
 }
 
 
-// Initial load
+// =======================
+// RESET FORM
+// =======================
+function resetForm() {
+
+  document.getElementById("taskForm").reset();
+  document.getElementById("taskId").value = "";
+  document.getElementById("formTitle").innerText = "Add Task";
+  editMode = false;
+}
+
+
+// =======================
+// INITIAL LOAD
+// =======================
 loadTasks();
 
 </script>
-
 </body>
 </html>
